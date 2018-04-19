@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">WeatherApp</string>
+    <string name="sendButton">sendButton</string>
+    <string name="enter_location">ENTER LOCATION</string>
+</resources>
