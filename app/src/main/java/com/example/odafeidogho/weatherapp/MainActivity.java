@@ -1,11 +1,16 @@
 package com.example.odafeidogho.weatherapp;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -21,10 +26,12 @@ public class MainActivity extends AppCompatActivity {
     private static final String APIID = "7b46002873dc8555cf1ae0b170fcd19e";
 
     //in case of error connecting due to incorrect api id
-    private static final String ERROR401 = "{\"code\":401,\"message\":" +
+    private static final String ERROR401 = "{\"cod\":401,\"message\":" +
             "\"Invalid API key. Please see http://openweathermap.org/faq#error401 for more info.\"}";
 
+    ProgressBar progressBar;
     EditText locationField;
+    String location, weatherUrl;
     Button sendButton, clearButton;
 
     HttpURLConnection connection = null;
@@ -50,12 +57,14 @@ public class MainActivity extends AppCompatActivity {
         sendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                location = locationField.getText().toString();
+                weatherUrl = "http://api.openweathermap.org/data/2.5/weather?q=" + location + "&units=metric&appid=" + APIID;
+                new GetWeatherInfoTask().execute(weatherUrl);
             }
         });
     }
 
-    private class GetWeatherInfoTaske extends AsyncTask<String,Integer,String> {
+    private class GetWeatherInfoTask extends AsyncTask<String,Integer,String> {
 
         @Override
         protected String doInBackground(String... strings) {
@@ -81,11 +90,54 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }finally {
-                if(reader !=null){
+                if(connection !=null){
+                    connection.disconnect();
                    // reader.close();
                 }
+                try{
+                    if(reader != null){
+                        reader.close();
+                    }
+                }catch(IOException e){
+                    e.printStackTrace();
+                }
             }
-            return null;
+            if(stringBuffer != null){
+                return stringBuffer.toString();
+            }else
+                return ERROR401;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            JSONObject weatherJSON = null;
+            Intent myIntent;
+
+            try{
+                weatherJSON = new JSONObject(s);
+               // progressBar.getProgress();
+                if(weatherJSON.getInt("cod") != 200){
+                    String errorString = weatherJSON.getString("message");
+                    myIntent = new Intent(MainActivity.this, ConnectionErrorActivity.class);
+                    Bundle myBundle = new Bundle();
+                    myBundle.putString("error", errorString);
+                    myIntent.putExtra("errorMessage", myBundle);
+                    startActivity(myIntent);
+                }else{
+                    System.out.println("i got here");
+                    myIntent = new Intent(MainActivity.this, TheWeatherActivity.class);
+                    Bundle weatherBundle = new Bundle();
+                    weatherBundle.putString("weather", s);
+                    System.out.println("i got here2");
+                    myIntent.putExtra("WeatherBundle", weatherBundle);
+
+                    startActivity(myIntent);
+                    System.out.println("i got here3");
+                }
+            }catch (JSONException e){
+                e.printStackTrace();
+            }
         }
     }
 }
